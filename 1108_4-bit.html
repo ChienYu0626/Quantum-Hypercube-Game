@@ -13,7 +13,7 @@
             align-items: center;
             justify-content: center;
             height: 100vh;
-            background: #a6dfdf;
+            background: #dfdda6;
             font-family: sans-serif;
         }
 
@@ -35,9 +35,9 @@
             color: white;
             font-weight: bold;
         }
-        #planet1 { background: #1a6da9; top: 0; left: 0; }
+        #planet1 { background: #105587; top: 0; left: 0; }
         #planet2 { background: #9b2012; top: 0; right: 0; }
-        #planet3 { background: #0e8540; bottom: 0; left: 0; }
+        #planet3 { background: #00682c; bottom: 0; left: 0; }
         #planet4 { background: #e0a911; bottom: 0; right: 0; }
 
         svg {
@@ -85,7 +85,7 @@
             planet3: document.getElementById("planet3"),
             planet4: document.getElementById("planet4"),
         };
-        
+
         const princes = [
             { emoji: "🐳", target: "planet1" },
             { emoji: "🐷", target: "planet2" },
@@ -104,51 +104,49 @@
         });
 
         const lines = [
-        ["line12", "planet1", "planet2"],
-        ["line13", "planet1", "planet3"],
-        ["line24", "planet2", "planet4"],
-        ["line34", "planet3", "planet4"]
+            ["line12", "planet1", "planet2"],
+            ["line13", "planet1", "planet3"],
+            ["line24", "planet2", "planet4"],
+            ["line34", "planet3", "planet4"]
         ];
 
         lines.forEach(([lineId, p1, p2]) => {
-        const line = document.getElementById(lineId);
-        line.addEventListener("click", () => {
-            const personA = planets[p1].querySelector(".person");
-            const personB = planets[p2].querySelector(".person");
+            const line = document.getElementById(lineId);
+            line.addEventListener("click", () => {
+                const personA = planets[p1].querySelector(".person");
+                const personB = planets[p2].querySelector(".person");
 
-            if (!personA || !personB) return; // 若其中一方沒人則不動作
+                if (!personA || !personB) return; // 若其中一方沒人則不動作
 
-            const rectA = planets[p1].getBoundingClientRect();
-            const rectB = planets[p2].getBoundingClientRect();
+                const rectA = planets[p1].getBoundingClientRect();
+                const rectB = planets[p2].getBoundingClientRect();
 
-            const deltaX = rectB.left - rectA.left;
-            const deltaY = rectB.top - rectA.top;
+                const deltaX = rectB.left - rectA.left;
+                const deltaY = rectB.top - rectA.top;
 
-            personA.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
-            personB.style.transform = `translate(${-deltaX}px, ${-deltaY}px)`;
+                personA.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
+                personB.style.transform = `translate(${-deltaX}px, ${-deltaY}px)`;
 
-            setTimeout(() => {
-            planets[p1].appendChild(personB);
-            planets[p2].appendChild(personA);
+                setTimeout(() => {
+                    planets[p1].appendChild(personB);
+                    planets[p2].appendChild(personA);
 
-            personA.style.transform = '';
-            personB.style.transform = '';
+                    personA.style.transform = '';
+                    personB.style.transform = '';
 
-            checkSuccess();
-            }, 800);
-        });
+                    checkSuccess();
+                }, 800);
+            });
         });
 
         function checkSuccess() {
-        const success = princes.every(prince => {
-            const planet = planets[prince.target];
-            const person = planet.querySelector(".person");
-            return person && person.textContent === prince.emoji;
-        });
+            const success = princes.every(prince => {
+                const planet = planets[prince.target];
+                const person = planet.querySelector(".person");
+                return person && person.textContent === prince.emoji;
+            });
 
-        if (success) {
-            alert("恭喜！每個王子都回到對應星球！");
-        }
+            if (success) { alert("恭喜！每個王子都回到對應星球！"); }
         }
     </script>
 </body>

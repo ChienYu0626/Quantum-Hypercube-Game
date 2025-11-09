@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Quantum Hypercube Game</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background: #d6cc98;
+            font-family: sans-serif;
+        }
+
+        #container {
+            position: relative;
+            width: 400px;
+            height: 200px;
+        }
+
+        .planet {
+            position: absolute;
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            color: white;
+            font-weight: bold;
+        }
+
+        #planet1 { background: #09426a; top: 40px; left: 20px; }
+        #planet2 { background: #9b2012; top: 40px; right: 20px; }
+
+        svg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        line {
+            stroke: #555;
+            stroke-width: 4;
+            cursor: pointer;
+            transition: stroke 0.3s;
+        }
+
+        line:hover { stroke: #000; }
+
+        .person {
+            position: absolute;
+            font-size: 3rem;
+            transition: transform 0.8s ease;
+        }
+
+        #steps {
+            margin-top: 15px;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #333;
+        }
+
+        #timer {
+            margin-top: 8px;
+            font-size: 1.2rem;
+            color: #444;
+        }
+
+        #resetBtn {
+            margin-top: 15px;
+            padding: 8px 16px;
+            background: #7a654f;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+        #resetBtn:hover {
+            background: #5c4d3a;
+        }
+    </style>
+</head>
+<body>
+    <h2>Quantum Hypercube Game</h2><br>
+    <div id="container">
+        <svg>
+            <line id="line12" x1="80" y1="100" x2="320" y2="100"></line>
+        </svg>
+        <div class="planet" id="planet1"></div>
+        <div class="planet" id="planet2"></div>
+    </div>
+
+    <div id="steps">步數：0</div>
+    <div id="timer">時間：0 秒</div>
+    <button id="resetBtn">重新開始</button>
+
+    <script>
+        const planets = {
+            planet1: document.getElementById("planet1"),
+            planet2: document.getElementById("planet2"),
+        };
+
+        const princes = [
+            { emoji: "🐳", target: "planet1" },
+            { emoji: "🐷", target: "planet2" }
+        ];
+
+        let steps = 0;
+        let startTime = Date.now();
+        let timerInterval;
+        const stepDisplay = document.getElementById("steps");
+        const timerDisplay = document.getElementById("timer");
+
+        const planetKeys = Object.keys(planets);
+
+        function shuffle(array) { return array.sort(() => Math.random() - 0.5); }
+
+        function placePrincesRandomly() {
+            const shuffledPlanets = shuffle([...planetKeys]);
+            // 清空原先的人物
+            Object.values(planets).forEach(p => p.innerHTML = "");
+            // 隨機放置王子
+            princes.forEach((prince, i) => {
+                const pDiv = document.createElement("div");
+                pDiv.classList.add("person");
+                pDiv.textContent = prince.emoji;
+                planets[shuffledPlanets[i]].appendChild(pDiv);
+            });
+        }
+
+        placePrincesRandomly();
+
+        function startTimer() {
+            clearInterval(timerInterval);
+            startTime = Date.now();
+            timerInterval = setInterval(() => {
+                const seconds = Math.floor((Date.now() - startTime) / 1000);
+                timerDisplay.textContent = `時間：${seconds} 秒`;
+            }, 1000);
+        }
+        startTimer();
+
+        const lines = [
+            ["line12", "planet1", "planet2"]
+        ];
+
+        lines.forEach(([lineId, p1, p2]) => {
+            const line = document.getElementById(lineId);
+            line.addEventListener("click", () => {
+                const personA = planets[p1].querySelector(".person");
+                const personB = planets[p2].querySelector(".person");
+                if (!personA || !personB) return;
+
+                steps++;
+                stepDisplay.textContent = `步數：${steps}`;
+
+                // getBoundingClientRect() : 取得物件在視窗座標系的位置與大小
+                const rectA = planets[p1].getBoundingClientRect();
+                const rectB = planets[p2].getBoundingClientRect();
+                const deltaX = rectB.left - rectA.left;
+                const deltaY = rectB.top - rectA.top;
+
+                // 滑動效果
+                personA.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
+                personB.style.transform = `translate(${-deltaX}px, ${-deltaY}px)`;
+
+                setTimeout(() => {
+                    planets[p1].appendChild(personB);
+                    planets[p2].appendChild(personA);
+                    personA.style.transform = '';
+                    personB.style.transform = '';
+                    checkSuccess();
+                }, 800);
+            });
+        });
+
+        function checkSuccess() {
+            const success = princes.every(prince => {
+                const planet = planets[prince.target];
+                const person = planet.querySelector(".person");
+                return person && person.textContent === prince.emoji;
+            });
+            if (success) {
+                const seconds = Math.floor((Date.now() - startTime) / 1000);
+                clearInterval(timerInterval);
+                alert(`哇！你走了 ${steps} 步，花了 ${seconds} 秒，讓每個動物都回到對應ㄉ星球上耶~\nBtw 你說這是小王子還是動物星球呢？`);
+            }
+        }
+
+        document.getElementById("resetBtn").addEventListener("click", () => {
+            steps = 0;
+            stepDisplay.textContent = `步數：0`;
+            placePrincesRandomly();
+            startTimer();
+        });
+    </script>
+</body>
+</html>

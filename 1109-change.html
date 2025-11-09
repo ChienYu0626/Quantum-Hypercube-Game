@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Quantum Hypercube Game</title>
+<style>
+    body {
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        background: #d6cc98;
+        font-family: sans-serif;
+    }
+
+    #container {
+        position: relative;
+        width: 400px;
+        height: 400px;
+    }
+
+    .planet {
+        position: absolute;
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2rem;
+        color: white;
+        font-weight: bold;
+    }
+
+    svg {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+    }
+
+    line {
+        stroke: #555;
+        stroke-width: 4;
+        cursor: pointer;
+        transition: stroke 0.3s;
+    }
+
+    line:hover { stroke: #000; }
+
+    .person {
+        position: absolute;
+        font-size: 3rem;
+        transition: transform 0.8s ease;
+    }
+
+    #steps {
+        margin-top: 15px;
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: #333;
+    }
+
+    #timer {
+        margin-top: 8px;
+        font-size: 1.2rem;
+        color: #444;
+    }
+
+    #resetBtn, #prevBtn, #nextBtn {
+        margin-top: 15px;
+        margin-right: 5px;
+        padding: 8px 16px;
+        background: #7a654f;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 1rem;
+        cursor: pointer;
+    }
+
+    #resetBtn:hover, #prevBtn:hover, #nextBtn:hover {
+        background: #5c4d3a;
+    }
+</style>
+</head>
+<body>
+<h2>Quantum Hypercube Game</h2><br>
+<div id="container">
+    <svg></svg>
+</div>
+
+<div id="steps">步數：0</div>
+<div id="timer">時間：0 秒</div>
+<div>
+    <button id="prevBtn">上一題</button>
+    <button id="resetBtn">重新開始</button>
+    <button id="nextBtn">下一題</button>
+</div>
+
+<script>
+let currentLevel = 0; // 目前題目index
+
+// 題目
+const levels = [
+    { // 兩顆星球
+        planets: [
+            {id: "planet1", color:"#09426a", top:140, left:20},
+            {id: "planet2", color:"#9b2012", top:140, left:260}
+        ],
+        princes: [
+            { emoji: "🐳", target: "planet1" },
+            { emoji: "🐷", target: "planet2" }
+        ],
+        lines: [
+            ["line12", "planet1", "planet2"]
+        ]
+    },
+    { // 四顆星球
+        planets: [
+            {id: "planet1", color:"#09426a", top:0, left:0},
+            {id: "planet2", color:"#9b2012", top:0, left:280},
+            {id: "planet3", color:"#0b5329", top:280, left:0},
+            {id: "planet4", color:"#cc9704", top:280, left:280}
+        ],
+        princes: [
+            { emoji: "🐳", target: "planet1" },
+            { emoji: "🐷", target: "planet2" },
+            { emoji: "🐸", target: "planet3" },
+            { emoji: "🐥", target: "planet4" }
+        ],
+        lines: [
+            ["line12", "planet1", "planet2"],
+            ["line13", "planet1", "planet3"],
+            ["line24", "planet2", "planet4"],
+            ["line34", "planet3", "planet4"]
+        ]
+    }
+];
+
+let planets = {};
+let princes = [];
+let lines = [];
+let steps = 0;
+let startTime = Date.now();
+let timerInterval;
+const stepDisplay = document.getElementById("steps");
+const timerDisplay = document.getElementById("timer");
+const container = document.getElementById("container");
+let svg = container.querySelector("svg");
+
+// 初始化題目
+function loadLevel(index){
+    // 清空 container 內部但保留 svg
+    container.querySelectorAll(".planet").forEach(p=>p.remove());
+    svg.innerHTML = "";
+
+    planets = {};
+    princes = JSON.parse(JSON.stringify(levels[index].princes));
+    lines = JSON.parse(JSON.stringify(levels[index].lines));
+
+    // 產生星球
+    levels[index].planets.forEach(p=>{
+        const div = document.createElement("div");
+        div.classList.add("planet");
+        div.id = p.id;
+        div.style.background = p.color;
+        div.style.top = p.top + "px";
+        div.style.left = p.left + "px";
+        container.appendChild(div);
+        planets[p.id] = div;
+    });
+
+    // 產生線
+    lines.forEach(([id, p1, p2])=>{
+        const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        line.id = id;
+        line.setAttribute("x1", levels[index].planets.find(x=>x.id===p1).left + 60);
+        line.setAttribute("y1", levels[index].planets.find(x=>x.id===p1).top + 60);
+        line.setAttribute("x2", levels[index].planets.find(x=>x.id===p2).left + 60);
+        line.setAttribute("y2", levels[index].planets.find(x=>x.id===p2).top + 60);
+        line.style.stroke="#555";
+        line.style.strokeWidth="4";
+        line.style.cursor="pointer";
+        svg.appendChild(line);
+
+        line.addEventListener("click", ()=> swap(p1,p2));
+    });
+
+    steps = 0;
+    stepDisplay.textContent = `步數：0`;
+    placePrincesRandomly();
+    startTimer();
+}
+
+// 隨機放置人物
+function shuffle(array){return array.sort(()=>Math.random()-0.5);}
+function placePrincesRandomly(){
+    const keys = Object.keys(planets);
+    const shuffledPlanets = shuffle([...keys]);
+    Object.values(planets).forEach(p=>p.innerHTML="");
+    princes.forEach((prince,i)=>{
+        const pDiv = document.createElement("div");
+        pDiv.classList.add("person");
+        pDiv.textContent = prince.emoji;
+        planets[shuffledPlanets[i]].appendChild(pDiv);
+    });
+}
+
+// 點擊線條交換
+function swap(p1,p2){
+    const personA = planets[p1].querySelector(".person");
+    const personB = planets[p2].querySelector(".person");
+    if(!personA || !personB) return;
+    steps++;
+    stepDisplay.textContent = `步數：${steps}`;
+
+    const rectA = planets[p1].getBoundingClientRect();
+    const rectB = planets[p2].getBoundingClientRect();
+    const deltaX = rectB.left - rectA.left;
+    const deltaY = rectB.top - rectA.top;
+
+    personA.style.transform = `translate(${deltaX}px,${deltaY}px)`;
+    personB.style.transform = `translate(${-deltaX}px,${-deltaY}px)`;
+
+    setTimeout(()=>{
+        planets[p1].appendChild(personB);
+        planets[p2].appendChild(personA);
+        personA.style.transform="";
+        personB.style.transform="";
+        checkSuccess();
+    },800);
+}
+
+// 檢查是否完成
+function checkSuccess(){
+    const success = princes.every(prince=>{
+        const planet = planets[prince.target];
+        const person = planet.querySelector(".person");
+        return person && person.textContent===prince.emoji;
+    });
+    if(success){
+        const seconds = Math.floor((Date.now()-startTime)/1000);
+        clearInterval(timerInterval);
+        alert(`哇！你走了 ${steps} 步，花了 ${seconds} 秒，讓每個動物都回到對應ㄉ星球上耶~\nBtw 你說這是小王子還是動物星球呢？`);
+    }
+}
+
+// 計時器
+function startTimer(){
+    clearInterval(timerInterval);
+    startTime=Date.now();
+    timerInterval=setInterval(()=>{
+        const seconds = Math.floor((Date.now()-startTime)/1000);
+        timerDisplay.textContent = `時間：${seconds} 秒`;
+    },1000);
+}
+
+// 重新開始
+document.getElementById("resetBtn").addEventListener("click",()=>{
+    steps=0;
+    stepDisplay.textContent=`步數：0`;
+    placePrincesRandomly();
+    startTimer();
+});
+
+// 左右切換題目
+document.getElementById("nextBtn").addEventListener("click", ()=>{
+    currentLevel = (currentLevel + 1) % levels.length;
+    loadLevel(currentLevel);
+});
+document.getElementById("prevBtn").addEventListener("click", ()=>{
+    currentLevel = (currentLevel - 1 + levels.length) % levels.length;
+    loadLevel(currentLevel);
+});
+
+// 初始化
+loadLevel(currentLevel);
+
+</script>
+</body>
+</html>

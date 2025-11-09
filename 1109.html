@@ -90,7 +90,6 @@
         background: #5c4d3a;
     }
 
-    /* 圓形左右按鈕 */
     #prevBtn, #nextBtn {
         position: absolute;
         top: 320px;
@@ -108,12 +107,9 @@
         transition: background 0.3s;
         z-index: 50;
     }
-    /* 放在 container 左右外側（約等於你先前的配置） */
-    #prevBtn { left: calc(50% - 320px); }
-    #nextBtn { left: calc(50% + 270px); }
 
-    #prevBtn::after { content: "◀"; }
-    #nextBtn::after { content: "▶"; }
+    #prevBtn { left: 5%; }
+    #nextBtn { right: 5%; }
 
     #prevBtn::after {
         content: "◀";
@@ -134,6 +130,22 @@
     #prevBtn:hover, #nextBtn:hover {
         background-color: #5c4d3a;
         color: white;
+    }
+
+    /* 大螢幕 */
+    #prevBtn { left: calc(50% - 320px); }
+    #nextBtn { left: calc(50% + 270px); }
+    /* 小螢幕 */
+    @media (max-width: 768px) {
+        #prevBtn {
+            left: 5%;
+            top: 350px;
+        }
+        #nextBtn {
+            right: 5%;
+            top: 350px;
+            left: auto;
+        }
     }
 
     /* 動畫類別（使用於 container） */
@@ -181,7 +193,7 @@
     }
 
     .popup-content h2 {
-        margin: 0 0 10px;
+        margin: 8 0 10px;
     }
 
     .popup-content button {
@@ -208,7 +220,6 @@
         from {transform: scale(0.8); opacity: 0;}
         to {transform: scale(1); opacity: 1;}
     }
-
 </style>
 </head>
 <body>
@@ -228,15 +239,15 @@
 <div id="successPopup" class="popup">
   <div class="popup-content">
     <h2>🎉 成功！</h2>
-    <p></p>
+    <p></p><br>
     <button id="closePopup">再玩一次</button>
   </div>
 </div>
 
 <script>
-let currentLevel = 0; // 目前題目 index（一開始顯示第 0 題）
+let currentLevel = 0; // 目前題目（一開始顯示第0題）
 const levels = [
-    { // 兩顆星球（初始題目）
+    { // 兩顆星球
         planets: [
             {id: "planet1", color:"#09426a", top:140, left:20},
             {id: "planet2", color:"#9b2012", top:140, left:260}
@@ -269,8 +280,8 @@ const levels = [
     }
 ];
 
-let planets = {};    // 當前 container 中的 planet DOM map
-let princes = [];    // 當前題目的 princes 目標資訊
+let planets = {};
+let princes = [];
 let steps = 0;
 let startTime = Date.now();
 let timerInterval;
@@ -280,10 +291,8 @@ const timerDisplay = document.getElementById("timer");
 const container = document.getElementById("container");
 let svg = container.querySelector("svg");
 
-// 複製並建立畫面內容（把星球與線繪在 container 中）
-// loadLevel 會立刻在 container 中建立 DOM（emoji 也會立即放上）
 function loadLevel(index){
-    // 清空舊的星球與線（保留 container 本身）
+    // 清空舊的星球與線
     container.querySelectorAll(".planet").forEach(p=>p.remove());
     container.querySelectorAll("line").forEach(l=>l.remove());
     svg = container.querySelector("svg");
@@ -319,11 +328,9 @@ function loadLevel(index){
         line.style.transition = "stroke 0.3s";
         svg.appendChild(line);
 
-        // hover 變色
         line.addEventListener("mouseenter", () => line.style.stroke = "#000");
         line.addEventListener("mouseleave", () => line.style.stroke = "#555");
 
-        // 點擊交換角色
         line.addEventListener("click", ()=> swap(p1, p2));
     });
 
@@ -331,14 +338,12 @@ function loadLevel(index){
     steps = 0;
     stepDisplay.textContent = `步數：0`;
 
-    placePrincesRandomly(); // 立即放置 emoji（不延遲）
+    placePrincesRandomly();
     startTimer();
 }
 
-// 隨機排序工具
 function shuffle(array){ return array.sort(()=>Math.random()-0.5); }
 
-// 放置 emoji（立即顯示）
 function placePrincesRandomly(){
     const keys = Object.keys(planets);
     let shuffled;
@@ -356,7 +361,6 @@ function placePrincesRandomly(){
     });
 }
 
-// 交換人物（使用目前 container 中的 planets）
 function swap(p1, p2){
     const personA = planets[p1].querySelector(".person");
     const personB = planets[p2].querySelector(".person");
@@ -381,7 +385,6 @@ function swap(p1, p2){
     }, 800);
 }
 
-// 檢查成功
 function checkSuccess(){
     const ok = princes.every(prince=>{
         const person = planets[prince.target].querySelector(".person");
@@ -395,7 +398,6 @@ function checkSuccess(){
     }
 }
 
-// 計時器
 function startTimer(){
     clearInterval(timerInterval);
     startTime = Date.now();
@@ -426,44 +428,33 @@ document.getElementById("resetBtn").addEventListener("click", ()=>{
 });
 
 // 切換動畫（按左或按右）
-// 按左（direction = "left"） => 畫面往左滑動（舊畫面向左滑出），新畫面從右滑入
-// 按右（direction = "right"） => 畫面往右滑動（舊畫面向右滑出），新畫面從左滑入
 let animating = false;
 function transitionLevel(nextIndex, direction){
     if(animating) return;
     animating = true;
 
     // 先套上舊畫面的滑出 class
-    if(direction === "left"){
-        container.classList.add("slide-out-left");
-    } else {
-        container.classList.add("slide-out-right");
-    }
+    if(direction === "left") container.classList.add("slide-out-left");
+    else container.classList.add("slide-out-right");
 
-    // 等舊畫面滑出一半再載入新畫面（以避免空白太久）
+    // 等舊畫面滑出一半再載入新畫面
     setTimeout(()=>{
-        // 載入新題目（會立刻建立星球與線與 emoji）
-        loadLevel(nextIndex);
+        loadLevel(nextIndex); // 新題目
+        container.classList.remove("slide-out-left","slide-out-right"); // 移除舊的slide-out class
 
-        // 移除舊的 slide-out 類別
-        container.classList.remove("slide-out-left","slide-out-right");
+        // 新畫面做滑入動畫
+        if(direction === "left") container.classList.add("slide-in-right");
+        else container.classList.add("slide-in-left");
 
-        // 新畫面做滑入動畫（如果 direction === left，則新畫面從右滑入）
-        if(direction === "left"){
-            container.classList.add("slide-in-right");
-        } else {
-            container.classList.add("slide-in-left");
-        }
-
-        // 動畫結束後清除 class 並允許下一次切換
+        // 動畫結束後清除class並允許下一次切換
         setTimeout(()=>{
             container.classList.remove("slide-in-right","slide-in-left");
             animating = false;
-        }, 620); // 稍微大於 0.6s
+        }, 620);
     }, 320); // 先讓舊畫面開始滑動
 }
 
-// 左右按鈕綁定（現在行為：點左就左滑；點右就右滑）
+// 左右按鈕綁定
 document.getElementById("prevBtn").addEventListener("click", ()=>{
     const next = (currentLevel - 1 + levels.length) % levels.length;
     transitionLevel(next, "left");
@@ -475,7 +466,7 @@ document.getElementById("nextBtn").addEventListener("click", ()=>{
     currentLevel = next;
 });
 
-// 初始載入：第 0 題（兩顆星球）
+// 初始載入第0題
 loadLevel(0);
 </script>
 </body>

@@ -64,12 +64,31 @@
             transition: transform 0.8s ease;
         }
 
-        /* 步數顯示區 */
         #steps {
             margin-top: 20px;
             font-size: 1.5rem;
             font-weight: bold;
             color: #333;
+        }
+
+        #timer {
+            margin-top: 8px;
+            font-size: 1.2rem;
+            color: #444;
+        }
+
+        #resetBtn {
+            margin-top: 15px;
+            padding: 8px 16px;
+            background: #7a654f;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+        #resetBtn:hover {
+            background: #5c4d3a;
         }
     </style>
 </head>
@@ -87,7 +106,11 @@
         <div class="planet" id="planet3"></div>
         <div class="planet" id="planet4"></div>
     </div>
+
     <div id="steps">步數：0</div>
+    <div id="timer">時間：0 秒</div>
+    <button id="resetBtn">重新開始</button>
+
     <script>
         const planets = {
             planet1: document.getElementById("planet1"),
@@ -104,17 +127,39 @@
         ];
 
         let steps = 0;
+        let startTime = Date.now();
+        let timerInterval;
         const stepDisplay = document.getElementById("steps");
+        const timerDisplay = document.getElementById("timer");
 
         const planetKeys = Object.keys(planets);
+
         function shuffle(array) { return array.sort(() => Math.random() - 0.5); }
-        const shuffledPlanets = shuffle([...planetKeys]);
-        princes.forEach((prince, i) => {
-            const pDiv = document.createElement("div");
-            pDiv.classList.add("person");
-            pDiv.textContent = prince.emoji;
-            planets[shuffledPlanets[i]].appendChild(pDiv);
-        });
+
+        function placePrincesRandomly() {
+            const shuffledPlanets = shuffle([...planetKeys]);
+            // 清空原先的人物
+            Object.values(planets).forEach(p => p.innerHTML = "");
+            // 隨機放置王子
+            princes.forEach((prince, i) => {
+                const pDiv = document.createElement("div");
+                pDiv.classList.add("person");
+                pDiv.textContent = prince.emoji;
+                planets[shuffledPlanets[i]].appendChild(pDiv);
+            });
+        }
+
+        placePrincesRandomly();
+
+        function startTimer() {
+            clearInterval(timerInterval);
+            startTime = Date.now();
+            timerInterval = setInterval(() => {
+                const seconds = Math.floor((Date.now() - startTime) / 1000);
+                timerDisplay.textContent = `時間：${seconds} 秒`;
+            }, 1000);
+        }
+        startTimer();
 
         const lines = [
             ["line12", "planet1", "planet2"],
@@ -159,9 +204,19 @@
                 const person = planet.querySelector(".person");
                 return person && person.textContent === prince.emoji;
             });
-            if (success) { alert(`哇！你花了 ${steps} 步讓每個動物都回到對應ㄉ星球上耶~`); }
+            if (success) {
+                const seconds = Math.floor((Date.now() - startTime) / 1000);
+                clearInterval(timerInterval);
+                alert(`哇！你走了 ${steps} 步，花了 ${seconds} 秒，讓每個動物都回到對應ㄉ星球上耶~\nBtw 你說這是小王子還是動物星球呢？`);
+            }
         }
+
+        document.getElementById("resetBtn").addEventListener("click", () => {
+            steps = 0;
+            stepDisplay.textContent = `步數：0`;
+            placePrincesRandomly();
+            startTimer();
+        });
     </script>
 </body>
 </html>
-

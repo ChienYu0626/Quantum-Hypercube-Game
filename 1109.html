@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Quantum Hypercube Game</title>
+<style>
+    body {
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        background: #d6cc98;
+        font-family: sans-serif;
+        overflow: hidden;
+    }
+
+    #container {
+        position: relative;
+        width: 400px;
+        height: 400px;
+        overflow: hidden;
+    }
+
+    .planet {
+        position: absolute;
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2rem;
+        color: white;
+        font-weight: bold;
+    }
+
+    svg {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+    }
+
+    line {
+        stroke: #555;
+        stroke-width: 5;
+        cursor: pointer;
+        transition: stroke 0.3s;
+    }
+
+    line:hover { stroke: #000; }
+
+    .person {
+        position: absolute;
+        font-size: 3rem;
+        transition: transform 0.8s ease;
+    }
+
+    #steps {
+        margin-top: 15px;
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: #333;
+    }
+
+    #timer {
+        margin-top: 8px;
+        font-size: 1.2rem;
+        color: #444;
+    }
+
+    #resetBtn {
+        margin-top: 15px;
+        margin-right: 5px;
+        padding: 8px 16px;
+        background: #7a654f;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 1rem;
+        cursor: pointer;
+    }
+
+    #resetBtn:hover {
+        background: #5c4d3a;
+    }
+
+    /* 圓形左右按鈕 */
+    #prevBtn, #nextBtn {
+        position: absolute;
+        top: 320px;
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        border: none;
+        background-color: #f1f1f1b1;
+        color: #7a654f;
+        font-size: 1.5rem;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background 0.3s;
+        z-index: 50;
+    }
+    /* 放在 container 左右外側（約等於你先前的配置） */
+    #prevBtn { left: calc(50% - 320px); }
+    #nextBtn { left: calc(50% + 270px); }
+
+    #prevBtn::after { content: "◀"; }
+    #nextBtn::after { content: "▶"; }
+
+    #prevBtn::after {
+        content: "◀";
+        position: relative;
+        top: -1px;
+        right: 3px;
+        font-size: 1.5rem;
+    }
+
+    #nextBtn::after {
+        content: "▶";
+        position: relative;
+        top: -1px;
+        left: 3px;
+        font-size: 1.5rem;
+    }
+
+    #prevBtn:hover, #nextBtn:hover {
+        background-color: #5c4d3a;
+        color: white;
+    }
+
+    /* 動畫類別（使用於 container） */
+    .slide-out-left { animation: slideOutLeft 0.6s forwards; }
+    .slide-in-right { animation: slideInRight 0.6s forwards; }
+    .slide-out-right { animation: slideOutRight 0.6s forwards; }
+    .slide-in-left { animation: slideInLeft 0.6s forwards; }
+
+    @keyframes slideOutLeft {
+        from { transform: translateX(0); opacity: 1; }
+        to { transform: translateX(-100%); opacity: 0; }
+    }
+    @keyframes slideInRight {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+    }
+
+    @keyframes slideOutRight {
+        from { transform: translateX(0); opacity: 1; }
+        to { transform: translateX(100%); opacity: 0; }
+    }
+    @keyframes slideInLeft {
+        from { transform: translateX(-100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+    }
+
+    .popup {
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.4);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        animation: fadeIn 0.3s ease;
+    }
+
+    .popup-content {
+        background: white;
+        border-radius: 20px;
+        padding: 30px 40px;
+        text-align: center;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+        animation: popUp 0.4s ease;
+    }
+
+    .popup-content h2 {
+        margin: 0 0 10px;
+    }
+
+    .popup-content button {
+        background: #ffb60b;
+        color: white;
+        border: none;
+        border-radius: 12px;
+        padding: 10px 20px;
+        cursor: pointer;
+        font-size: 16px;
+        transition: background 0.2s;
+    }
+
+    .popup-content button:hover {
+        background: #ff750b;
+    }
+
+    @keyframes fadeIn {
+        from {opacity: 0;}
+        to {opacity: 1;}
+    }
+
+    @keyframes popUp {
+        from {transform: scale(0.8); opacity: 0;}
+        to {transform: scale(1); opacity: 1;}
+    }
+
+</style>
+</head>
+<body>
+<h2>Quantum Hypercube Game</h2><br>
+<div id="container">
+    <svg></svg>
+</div>
+
+<div id="steps">步數：0</div>
+<div id="timer">時間：0 秒</div>
+<div>
+    <button id="prevBtn" class="circle-btn"></button>
+    <button id="resetBtn">重新開始</button>
+    <button id="nextBtn" class="circle-btn"></button>
+</div>
+
+<div id="successPopup" class="popup">
+  <div class="popup-content">
+    <h2>🎉 成功！</h2>
+    <p></p>
+    <button id="closePopup">再玩一次</button>
+  </div>
+</div>
+
+<script>
+let currentLevel = 0; // 目前題目 index（一開始顯示第 0 題）
+const levels = [
+    { // 兩顆星球（初始題目）
+        planets: [
+            {id: "planet1", color:"#09426a", top:140, left:20},
+            {id: "planet2", color:"#9b2012", top:140, left:260}
+        ],
+        princes: [
+            { emoji: "🐳", target: "planet1" },
+            { emoji: "🐷", target: "planet2" }
+        ],
+        lines: [["line12", "planet1", "planet2"]]
+    },
+    { // 四顆星球
+        planets: [
+            {id: "planet1", color:"#09426a", top:0, left:0},
+            {id: "planet2", color:"#9b2012", top:0, left:280},
+            {id: "planet3", color:"#0b5329", top:280, left:0},
+            {id: "planet4", color:"#cc9704", top:280, left:280}
+        ],
+        princes: [
+            { emoji: "🐳", target: "planet1" },
+            { emoji: "🐷", target: "planet2" },
+            { emoji: "🐸", target: "planet3" },
+            { emoji: "🐥", target: "planet4" }
+        ],
+        lines: [
+            ["line12", "planet1", "planet2"],
+            ["line13", "planet1", "planet3"],
+            ["line24", "planet2", "planet4"],
+            ["line34", "planet3", "planet4"]
+        ]
+    }
+];
+
+let planets = {};    // 當前 container 中的 planet DOM map
+let princes = [];    // 當前題目的 princes 目標資訊
+let steps = 0;
+let startTime = Date.now();
+let timerInterval;
+
+const stepDisplay = document.getElementById("steps");
+const timerDisplay = document.getElementById("timer");
+const container = document.getElementById("container");
+let svg = container.querySelector("svg");
+
+// 複製並建立畫面內容（把星球與線繪在 container 中）
+// loadLevel 會立刻在 container 中建立 DOM（emoji 也會立即放上）
+function loadLevel(index){
+    // 清空舊的星球與線（保留 container 本身）
+    container.querySelectorAll(".planet").forEach(p=>p.remove());
+    container.querySelectorAll("line").forEach(l=>l.remove());
+    svg = container.querySelector("svg");
+    svg.innerHTML = "";
+
+    planets = {};
+    princes = JSON.parse(JSON.stringify(levels[index].princes));
+    const levelLines = JSON.parse(JSON.stringify(levels[index].lines));
+
+    // 建立星球
+    levels[index].planets.forEach(p=>{
+        const div = document.createElement("div");
+        div.classList.add("planet");
+        div.id = p.id;
+        div.style.background = p.color;
+        div.style.top = p.top + "px";
+        div.style.left = p.left + "px";
+        container.appendChild(div);
+        planets[p.id] = div;
+    });
+
+    // 建立線（加入到 svg）
+    levelLines.forEach(([id, p1, p2])=>{
+        const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        line.id = id;
+        line.setAttribute("x1", levels[index].planets.find(x=>x.id===p1).left + 60);
+        line.setAttribute("y1", levels[index].planets.find(x=>x.id===p1).top + 60);
+        line.setAttribute("x2", levels[index].planets.find(x=>x.id===p2).left + 60);
+        line.setAttribute("y2", levels[index].planets.find(x=>x.id===p2).top + 60);
+        line.style.stroke = "#555";
+        line.style.strokeWidth = 4;
+        line.style.cursor = "pointer";
+        line.style.transition = "stroke 0.3s";
+        svg.appendChild(line);
+
+        // hover 變色
+        line.addEventListener("mouseenter", () => line.style.stroke = "#000");
+        line.addEventListener("mouseleave", () => line.style.stroke = "#555");
+
+        // 點擊交換角色
+        line.addEventListener("click", ()=> swap(p1, p2));
+    });
+
+
+    steps = 0;
+    stepDisplay.textContent = `步數：0`;
+
+    placePrincesRandomly(); // 立即放置 emoji（不延遲）
+    startTimer();
+}
+
+// 隨機排序工具
+function shuffle(array){ return array.sort(()=>Math.random()-0.5); }
+
+// 放置 emoji（立即顯示）
+function placePrincesRandomly(){
+    const keys = Object.keys(planets);
+    let shuffled;
+    do {
+        shuffled = shuffle([...keys]);
+    } while (shuffled.every((key, i) => key === princes[i].target)); 
+    // 如果每個動物都在正確位置，就再洗一次
+
+    Object.values(planets).forEach(p=> p.innerHTML = "");
+    princes.forEach((prince,i)=>{
+        const d = document.createElement("div");
+        d.className = "person";
+        d.textContent = prince.emoji;
+        planets[shuffled[i]].appendChild(d);
+    });
+}
+
+// 交換人物（使用目前 container 中的 planets）
+function swap(p1, p2){
+    const personA = planets[p1].querySelector(".person");
+    const personB = planets[p2].querySelector(".person");
+    if(!personA || !personB) return;
+    steps++;
+    stepDisplay.textContent = `步數：${steps}`;
+
+    const rectA = planets[p1].getBoundingClientRect();
+    const rectB = planets[p2].getBoundingClientRect();
+    const deltaX = rectB.left - rectA.left;
+    const deltaY = rectB.top - rectA.top;
+
+    personA.style.transform = `translate(${deltaX}px,${deltaY}px)`;
+    personB.style.transform = `translate(${-deltaX}px,${-deltaY}px)`;
+
+    setTimeout(()=>{
+        planets[p1].appendChild(personB);
+        planets[p2].appendChild(personA);
+        personA.style.transform = "";
+        personB.style.transform = "";
+        checkSuccess();
+    }, 800);
+}
+
+// 檢查成功
+function checkSuccess(){
+    const ok = princes.every(prince=>{
+        const person = planets[prince.target].querySelector(".person");
+        return person && person.textContent === prince.emoji;
+    });
+    if(ok){
+        const seconds = Math.floor((Date.now()-startTime)/1000);
+        clearInterval(timerInterval);
+        showPopup(steps, seconds); 
+
+    }
+}
+
+// 計時器
+function startTimer(){
+    clearInterval(timerInterval);
+    startTime = Date.now();
+    timerInterval = setInterval(()=>{
+        const seconds = Math.floor((Date.now()-startTime)/1000);
+        timerDisplay.textContent = `時間：${seconds} 秒`;
+    },1000);
+}
+
+function showPopup(steps, seconds) {
+    const popup = document.getElementById("successPopup");
+    const message = `哇！你走了 ${steps} 步，花了 ${seconds} 秒，讓每個動物都回到對應ㄉ星球上耶~<br>Btw 你說這是小王子還是動物星球呢？`;
+    popup.querySelector("p").innerHTML = message; // 用 innerHTML 代替 textContent
+    popup.style.display = "flex";
+}
+
+document.getElementById("closePopup").addEventListener("click", () => {
+  document.getElementById("successPopup").style.display = "none";
+  placePrincesRandomly(); // 重新洗牌開始新遊戲
+});
+
+// 重新開始
+document.getElementById("resetBtn").addEventListener("click", ()=>{
+    steps = 0;
+    stepDisplay.textContent = `步數：0`;
+    placePrincesRandomly();
+    startTimer();
+});
+
+// 切換動畫（按左或按右）
+// 按左（direction = "left"） => 畫面往左滑動（舊畫面向左滑出），新畫面從右滑入
+// 按右（direction = "right"） => 畫面往右滑動（舊畫面向右滑出），新畫面從左滑入
+let animating = false;
+function transitionLevel(nextIndex, direction){
+    if(animating) return;
+    animating = true;
+
+    // 先套上舊畫面的滑出 class
+    if(direction === "left"){
+        container.classList.add("slide-out-left");
+    } else {
+        container.classList.add("slide-out-right");
+    }
+
+    // 等舊畫面滑出一半再載入新畫面（以避免空白太久）
+    setTimeout(()=>{
+        // 載入新題目（會立刻建立星球與線與 emoji）
+        loadLevel(nextIndex);
+
+        // 移除舊的 slide-out 類別
+        container.classList.remove("slide-out-left","slide-out-right");
+
+        // 新畫面做滑入動畫（如果 direction === left，則新畫面從右滑入）
+        if(direction === "left"){
+            container.classList.add("slide-in-right");
+        } else {
+            container.classList.add("slide-in-left");
+        }
+
+        // 動畫結束後清除 class 並允許下一次切換
+        setTimeout(()=>{
+            container.classList.remove("slide-in-right","slide-in-left");
+            animating = false;
+        }, 620); // 稍微大於 0.6s
+    }, 320); // 先讓舊畫面開始滑動
+}
+
+// 左右按鈕綁定（現在行為：點左就左滑；點右就右滑）
+document.getElementById("prevBtn").addEventListener("click", ()=>{
+    const next = (currentLevel - 1 + levels.length) % levels.length;
+    transitionLevel(next, "left");
+    currentLevel = next;
+});
+document.getElementById("nextBtn").addEventListener("click", ()=>{
+    const next = (currentLevel + 1) % levels.length;
+    transitionLevel(next, "right");
+    currentLevel = next;
+});
+
+// 初始載入：第 0 題（兩顆星球）
+loadLevel(0);
+</script>
+</body>
+</html>

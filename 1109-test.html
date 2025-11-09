@@ -138,18 +138,18 @@
     /* 大螢幕版（預設）*/
     #prevBtn { left: calc(50% - 320px); }
     #nextBtn { left: calc(50% + 270px); }
-
-@media (max-width: 768px) {
-    #prevBtn {
-        left: 5%;
-        top: 380px;
+    /* 小螢幕版*/
+    @media (max-width: 768px) {
+        #prevBtn {
+            left: 5%;
+            top: 350px;
+        }
+        #nextBtn {
+            right: 5%; /* 用 right 而不是 left */
+            top: 350px;
+            left: auto; /* 避免被原本的 left 設定覆蓋 */
+        }
     }
-    #nextBtn {
-        right: 5%; /* 用 right 而不是 left */
-        top: 380px;
-        left: auto; /* 避免被原本的 left 設定覆蓋 */
-    }
-}
 
 
     /* 動畫類別（使用於 container） */
